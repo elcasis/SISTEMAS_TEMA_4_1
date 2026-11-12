@@ -1,0 +1,2116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#000000" />
+  <title>SO Tema 4 · Planificación de CPU (4.2, 4.3, 4.4)</title>
+  <style>
+    :root {
+      --bg-pure: #000000;
+      --bg-elevated: #0a0a0c;
+      --card-bg: #161618;
+      --card-bg-alt: #1c1c1e;
+      --border: #2c2c2e;
+      --border-light: #3a3a3c;
+      --text-main: #f5f5f7;
+      --text-muted: #98989f;
+      --accent: #0a84ff;
+      --accent-soft: rgba(10, 132, 255, 0.16);
+      --purple: #bf5af2;
+      --purple-soft: rgba(191, 90, 242, 0.16);
+      --cyan: #64d2ff;
+      --success: #30d158;
+      --success-soft: rgba(48, 209, 88, 0.16);
+      --danger: #ff453a;
+      --danger-soft: rgba(255, 69, 58, 0.16);
+      --warning: #ffd60a;
+      --warning-soft: rgba(255, 214, 10, 0.15);
+      --safe-top: env(safe-area-inset-top, 20px);
+      --safe-bottom: env(safe-area-inset-bottom, 20px);
+      --tabbar-h: 68px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      background-color: var(--bg-pure);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.48;
+      overscroll-behavior-y: none;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Contenedor optimizado para iPhone 11 (414x896px) */
+    .app-shell {
+      width: 100%;
+      max-width: 430px;
+      min-height: 100dvh;
+      margin: 0 auto;
+      background-color: var(--bg-pure);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      border-left: 1px solid #141416;
+      border-right: 1px solid #141416;
+      padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 16px);
+    }
+
+    /* Cabecera superior fija estilo iOS */
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(0, 0, 0, 0.86);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      padding: calc(var(--safe-top) + 10px) 16px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .topic-badge {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border: 1px solid rgba(10, 132, 255, 0.35);
+    }
+
+    .app-title {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-main);
+    }
+
+    /* Segmented Control (Teoría Visual vs Test / Juego) */
+    .segmented-control {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      background: var(--card-bg-alt);
+      padding: 3px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .seg-btn {
+      appearance: none;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 13.5px;
+      font-weight: 600;
+      min-height: 38px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .seg-btn.active {
+      background: #2c2c30;
+      color: var(--text-main);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+    }
+
+    /* Vista principal */
+    .main-view {
+      padding: 14px 14px 24px;
+      flex: 1;
+    }
+
+    /* Tarjetas de Teoría Visual */
+    .theory-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    }
+
+    .theory-card h2 {
+      font-size: 16.5px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .theory-card h3 {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--cyan);
+      margin: 12px 0 6px;
+    }
+
+    .theory-card p {
+      color: #d1d1d6;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+
+    .bullet-list {
+      list-style: none;
+      margin: 8px 0;
+    }
+
+    .bullet-list li {
+      position: relative;
+      padding-left: 18px;
+      margin-bottom: 8px;
+      font-size: 13.8px;
+      color: #dcdce2;
+    }
+
+    .bullet-list li::before {
+      content: "▸";
+      position: absolute;
+      left: 2px;
+      color: var(--accent);
+      font-weight: bold;
+    }
+
+    .highlight-box {
+      background: rgba(10, 132, 255, 0.1);
+      border-left: 3px solid var(--accent);
+      padding: 10px 12px;
+      border-radius: 0 10px 10px 0;
+      margin: 10px 0;
+      font-size: 13.5px;
+      color: var(--text-main);
+    }
+
+    .warning-box {
+      background: var(--danger-soft);
+      border-left: 3px solid var(--danger);
+      padding: 10px 12px;
+      border-radius: 0 10px 10px 0;
+      margin: 10px 0;
+      font-size: 13.5px;
+      color: #ffd9d6;
+    }
+
+    .formula-box {
+      background: #0d0d10;
+      border: 1px solid var(--border-light);
+      border-radius: 12px;
+      padding: 11px 12px;
+      margin: 10px 0;
+      font-family: "SF Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+      color: var(--warning);
+      text-align: center;
+      overflow-x: auto;
+    }
+
+    /* Tablas responsivas */
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      margin: 10px 0;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+      text-align: center;
+    }
+
+    table.data-table th {
+      background: #232327;
+      color: var(--text-main);
+      font-weight: 700;
+      padding: 8px 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    table.data-table td {
+      padding: 7px 6px;
+      border-bottom: 1px solid #222225;
+      color: #d1d1d6;
+    }
+
+    table.data-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .badge-max {
+      background: var(--success-soft);
+      color: var(--success);
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 11.5px;
+    }
+
+    .badge-min {
+      background: var(--accent-soft);
+      color: var(--cyan);
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 11.5px;
+    }
+
+    /* Diagramas de Gantt en CSS */
+    .gantt-container {
+      margin: 10px 0;
+      background: #0e0e11;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    .gantt-label {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+      font-weight: 600;
+    }
+
+    .gantt-bar {
+      display: flex;
+      width: 100%;
+      height: 30px;
+      border-radius: 6px;
+      overflow: hidden;
+      font-size: 11.5px;
+      font-weight: 700;
+    }
+
+    .gantt-seg {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      border-right: 1px solid rgba(0,0,0,0.4);
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .gantt-ticks {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10.5px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-family: monospace;
+    }
+
+    /* Diagramas de niveles y colas */
+    .queue-diagram {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin: 10px 0;
+    }
+
+    .queue-level {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: #111114;
+      border: 1px solid var(--border-light);
+      border-radius: 9px;
+      padding: 8px 12px;
+      font-size: 12.5px;
+    }
+
+    .queue-tag {
+      font-weight: 700;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 5px;
+      flex-shrink: 0;
+    }
+
+    /* ==================== MODO JUEGO (QUIZ) ==================== */
+    .quiz-hud {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px;
+      margin-bottom: 12px;
+      position: sticky;
+      top: calc(var(--safe-top) + 92px);
+      z-index: 30;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55);
+    }
+
+    .hud-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .lives-box {
+      font-size: 16px;
+      letter-spacing: 2px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .score-box {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--warning);
+      background: var(--warning-soft);
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+
+    .streak-badge {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--success);
+      margin-left: 6px;
+    }
+
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 6px;
+      background: #262629;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--purple));
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    /* Interruptor de Mezcla con los otros puntos */
+    .mix-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: var(--card-bg-alt);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      margin-bottom: 12px;
+    }
+
+    .mix-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .mix-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .mix-sub {
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+
+    .ios-switch {
+      position: relative;
+      width: 50px;
+      height: 30px;
+      flex-shrink: 0;
+    }
+
+    .ios-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .ios-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background-color: #39393d;
+      transition: 0.25s;
+      border-radius: 34px;
+    }
+
+    .ios-slider::before {
+      position: absolute;
+      content: "";
+      height: 26px;
+      width: 26px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: 0.25s;
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .ios-switch input:checked + .ios-slider {
+      background-color: var(--success);
+    }
+
+    .ios-switch input:checked + .ios-slider::before {
+      transform: translateX(20px);
+    }
+
+    /* Tarjeta de pregunta */
+    .question-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    .q-origin-tag {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: var(--purple-soft);
+      color: #d98ff8;
+      margin-bottom: 8px;
+    }
+
+    .q-text {
+      font-size: 15.5px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 14px;
+      line-height: 1.42;
+    }
+
+    .options-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .option-btn {
+      width: 100%;
+      min-height: 48px;
+      text-align: left;
+      background: var(--card-bg-alt);
+      border: 1.5px solid var(--border-light);
+      border-radius: 12px;
+      padding: 12px 14px;
+      color: var(--text-main);
+      font-size: 14px;
+      line-height: 1.38;
+      cursor: pointer;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      transition: all 0.15s ease;
+    }
+
+    .option-btn:active:not(:disabled) {
+      transform: scale(0.985);
+      background: #252529;
+    }
+
+    .opt-letter {
+      width: 24px;
+      height: 24px;
+      border-radius: 7px;
+      background: #2c2c30;
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 12.5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .option-btn.correct {
+      background: var(--success-soft);
+      border-color: var(--success);
+      color: #d8ffe2;
+    }
+
+    .option-btn.correct .opt-letter {
+      background: var(--success);
+      color: #000;
+    }
+
+    .option-btn.wrong {
+      background: var(--danger-soft);
+      border-color: var(--danger);
+      color: #ffd8d6;
+    }
+
+    .option-btn.wrong .opt-letter {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .feedback-panel {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 13.5px;
+      line-height: 1.45;
+      background: #101013;
+      border: 1px solid var(--border-light);
+    }
+
+    .feedback-title {
+      font-weight: 800;
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .next-btn, .primary-btn {
+      width: 100%;
+      min-height: 48px;
+      margin-top: 12px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .next-btn:active, .primary-btn:active {
+      opacity: 0.85;
+    }
+
+    .end-screen {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 24px 18px;
+      text-align: center;
+      margin-top: 10px;
+    }
+
+    .end-icon {
+      font-size: 46px;
+      margin-bottom: 10px;
+    }
+
+    .end-title {
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .end-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 16px 0;
+    }
+
+    .stat-pill {
+      background: var(--card-bg-alt);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 6px;
+    }
+
+    .stat-val {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--cyan);
+    }
+
+    .stat-lbl {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* ==================== BOTTOM TAB BAR (3 BOTONES FIJOS) ==================== */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 430px;
+      height: calc(var(--tabbar-h) + var(--safe-bottom));
+      padding-bottom: var(--safe-bottom);
+      background: rgba(12, 12, 14, 0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      z-index: 100;
+    }
+
+    .tab-btn {
+      appearance: none;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      cursor: pointer;
+      min-height: 48px;
+      position: relative;
+      transition: color 0.2s ease;
+    }
+
+    .tab-btn.active {
+      color: var(--accent);
+    }
+
+    .tab-btn.active::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      width: 42px;
+      height: 3px;
+      background: var(--accent);
+      border-radius: 0 0 4px 4px;
+    }
+
+    .tab-num {
+      font-size: 13px;
+      font-weight: 800;
+      padding: 2px 9px;
+      border-radius: 8px;
+      background: #1e1e22;
+    }
+
+    .tab-btn.active .tab-num {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .tab-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- CABECERA SUPERIOR -->
+    <header class="app-header">
+      <div class="header-top">
+        <span class="topic-badge" id="headerBadge">PUNTO 4.2</span>
+        <h1 class="app-title" id="headerTitle">Fundamentos y Niveles</h1>
+      </div>
+      <div class="segmented-control" role="tablist">
+        <button class="seg-btn active" id="btnModeTheory" onclick="setMode('theory')">
+          <span>📘</span> Teoría Visual
+        </button>
+        <button class="seg-btn" id="btnModeQuiz" onclick="setMode('quiz')">
+          <span>🎮</span> Test (20 Pregs)
+        </button>
+      </div>
+    </header>
+
+    <!-- CONTENEDOR DINÁMICO -->
+    <main class="main-view" id="mainContainer"></main>
+
+    <!-- BARRA DE NAVEGACIÓN INFERIOR (3 PUNTOS) -->
+    <nav class="bottom-nav" aria-label="Puntos del Tema 4">
+      <button class="tab-btn active" id="tab-42" onclick="selectSection('4.2')">
+        <span class="tab-num">4.2</span>
+        <span class="tab-label">Fundamentos</span>
+      </button>
+      <button class="tab-btn" id="tab-43" onclick="selectSection('4.3')">
+        <span class="tab-num">4.3</span>
+        <span class="tab-label">Criterios</span>
+      </button>
+      <button class="tab-btn" id="tab-44" onclick="selectSection('4.4')">
+        <span class="tab-num">4.4</span>
+        <span class="tab-label">Algoritmos</span>
+      </button>
+    </nav>
+  </div>
+
+  <script>
+    /* =========================================================================
+       BLOQUES DE EXPLICACIÓN VISUAL (4.2, 4.3 y 4.4)
+       ========================================================================= */
+    const THEORY_HTML = {
+      "4.2": `
+        <div class="theory-card">
+          <h2>⚡ 4.2. Conceptos y Niveles de Planificación</h2>
+          <p>En los sistemas multiprogramados, la planificación de la CPU conmuta el procesador entre los procesos listos para maximizar el aprovechamiento del hardware.</p>
+          <div class="highlight-box">
+            <strong>Ciclo Ráfaga CPU – E/S:</strong> La ejecución de todo proceso consiste en una alternancia continua de <strong>ráfagas de CPU</strong> (cálculo en procesador) y <strong>ráfagas de E/S</strong> (espera por dispositivos). Todo proceso empieza y termina siempre con una ráfaga de CPU.
+          </div>
+          <ul class="bullet-list">
+            <li><strong>Procesos limitados por E/S (I/O-bound):</strong> Muchas ráfagas de CPU muy cortas e intensivas en operaciones de E/S.</li>
+            <li><strong>Procesos limitados por CPU (CPU-bound):</strong> Pocas ráfagas de CPU pero de muy larga duración (intensivos en cómputo).</li>
+          </ul>
+        </div>
+
+        <div class="theory-card">
+          <h2>🏛️ Los 3 Niveles de Planificación de la CPU</h2>
+          <p>Según su escala temporal y las transiciones de estado que gestionan (Ejercicio 9 del PDF):</p>
+          <div class="queue-diagram">
+            <div class="queue-level" style="border-left: 4px solid #bf5af2;">
+              <div>
+                <strong>1. Largo Plazo (Admisión)</strong>
+                <div style="font-size:12px; color:#98989f;">Gestiona las transiciones <em>Nuevo → Listo</em> y <em>Ejecutando → Saliente</em>. Decide cuándo se admite un proceso para ejecutarse y cuándo debe finalizar (por ejemplo, si tiene prioridad muy baja y escasean los recursos para procesos más prioritarios).</div>
+              </div>
+              <span class="queue-tag" style="background:rgba(191,90,242,0.2);color:#d98ff8;">Largo</span>
+            </div>
+            <div class="queue-level" style="border-left: 4px solid #ffd60a;">
+              <div>
+                <strong>2. Medio Plazo (Swapping)</strong>
+                <div style="font-size:12px; color:#98989f;">Realiza el <strong>swapping</strong> o intercambio de procesos activos entre el <strong>disco y la memoria principal</strong>. Como todo proceso necesita estar en memoria principal para ejecutarse, permite mover procesos temporalmente a disco para aumentar el número de procesos simultáneos.</div>
+              </div>
+              <span class="queue-tag" style="background:rgba(255,214,10,0.18);color:#ffd60a;">Medio</span>
+            </div>
+            <div class="queue-level" style="border-left: 4px solid #30d158;">
+              <div>
+                <strong>3. Corto Plazo (Planificador de CPU)</strong>
+                <div style="font-size:12px; color:#98989f;">Reparte directamente el tiempo de procesamiento entre los procesos que están <strong>listos para ejecutarse</strong> en memoria principal, buscando maximizar el uso de CPU y minimizar el tiempo de espera.</div>
+              </div>
+              <span class="queue-tag" style="background:rgba(48,209,88,0.2);color:#30d158;">Corto</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="theory-card">
+          <h2>🔄 Apropiativo vs. No Apropiativo (Cooperativo)</h2>
+          <p>La planificación de corto plazo puede operar bajo dos modalidades:</p>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Tipo</th>
+                  <th>Regla de desalojo</th>
+                  <th>Impacto práctico</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>No apropiativo (Cooperativo)</strong></td>
+                  <td>No desaloja nunca al proceso en ejecución.</td>
+                  <td>El proceso solo libera la CPU cuando termina su ráfaga o solicita una operación de E/S.</td>
+                </tr>
+                <tr>
+                  <td><strong>Apropiativo (Preemptive)</strong></td>
+                  <td>Puede desalojar al proceso en ejecución en cualquier instante.</td>
+                  <td>Si llega un proceso más prioritario o vence el cuanto temporal, el proceso actual vuelve a la cola de listos.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="highlight-box">
+            <strong>Caso práctico (Ejercicio 10 - Dinámico):</strong> Si en $t=0$ están P1(8ms, prio 3), P2(4ms, prio 2), P3(12ms, prio 6) y en $t=8\\text{ ms}$ llegan P4(3ms, prio 0) y P5(5ms, prio 1), tanto el esquema no apropiativo (Escenario A) como el apropiativo (Escenario B) dan $t_{me} = 7\\text{ ms}$, pero el <strong>apropiativo reduce el tiempo de espera de los procesos más prioritarios</strong> (P4 pasa de esperar 4 ms a 0 ms; P5 pasa de 7 ms a 3 ms).
+          </div>
+        </div>
+
+        <div class="theory-card">
+          <h2>🚀 Activador (Dispatcher) y Latencia de Activación</h2>
+          <p>En cada cambio de proceso es necesario ejecutar instrucciones del <strong>kernel</strong> del sistema operativo para realizar el <strong>cambio de contexto</strong> y el <strong>cambio de modo</strong> necesarios para desalojar el proceso en ejecución y cargar el nuevo.</p>
+          <div class="warning-box">
+            <strong>Latencia de activación (tiempo del dispatcher):</strong> Es el tiempo empleado en desalojar un proceso y cargar uno nuevo. Como demuestra el <strong>Ejercicio 6</strong> (sobre RR con $q=4\\text{ ms}$ para P1=8, P2=4, P3=12, P4=3, P5=5 ms), si la latencia de activación pasa de ser despreciable (0 ms) a valer <strong>1 ms</strong> entre cada par de procesos, el tiempo medio de espera sube de <strong>14,8 ms</strong> a <strong>19,6 ms</strong>.
+          </div>
+        </div>
+      `,
+
+      "4.3": `
+        <div class="theory-card">
+          <h2>📊 4.3. Criterios de Planificación de la CPU</h2>
+          <p>Para comparar entre sí los diferentes algoritmos de planificación de la CPU (Silberschatz et al., 2013, p. 265), se emplean cinco criterios clave:</p>
+          <ul class="bullet-list">
+            <li><strong>1. Uso de la CPU:</strong> Interesa mantener la CPU lo más ocupada que sea posible, eliminando los tiempos vacíos de carga.
+              <br><span style="color:var(--cyan);">• Idealmente: 100 % | En el uso real: varía entre el 40 % y el 90 %.</span>
+            </li>
+            <li><strong>2. Tasa de procesamiento (throughput):</strong> Medida del número de procesos que se completan por unidad de tiempo. Depende también de la duración de cada proceso.</li>
+            <li><strong>3. Tiempo de ejecución:</strong> Desde el punto de vista de cada proceso individual, es el tiempo total que tarda en ejecutarse. Es la suma de <strong>cuatro tiempos</strong>:
+              <div class="formula-box">T. Ejecución = Espera entrar en Memoria + Espera en Cola + Ejecución en CPU + Espera fin de E/S</div>
+            </li>
+            <li><strong>4. Tiempo de espera:</strong> Suma de los tiempos que el proceso pasa en la cola de espera para ejecutarse.
+              <div class="highlight-box" style="margin:6px 0;">
+                <strong>¡Punto crítico!</strong> De los cuatro tiempos que forman el tiempo de ejecución, el algoritmo de planificación de CPU <strong>afecta únicamente al tiempo de espera</strong> en cola.
+              </div>
+            </li>
+            <li><strong>5. Tiempo de respuesta:</strong> Especialmente relevante en <strong>sistemas interactivos</strong> (donde el tiempo de ejecución puede no ser el mejor criterio). Mide el tiempo entre el <strong>comienzo de una tarea y el envío de la primera respuesta</strong> (que puede no coincidir con el tiempo total de ejecución) y viene <strong>limitado por la velocidad del dispositivo de salida</strong> utilizado.</li>
+          </ul>
+        </div>
+
+        <div class="theory-card">
+          <h2>🎯 Tabla 1: Objetivos de Optimización</h2>
+          <p>Para estos cinco criterios se busca alcanzar los siguientes objetivos de optimización:</p>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Criterio</th>
+                  <th>Objetivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Uso de la CPU</strong></td>
+                  <td><span class="badge-max">Maximizar ▲</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Tasa de procesamiento (throughput)</strong></td>
+                  <td><span class="badge-max">Maximizar ▲</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Tiempo de ejecución</strong></td>
+                  <td><span class="badge-min">Minimizar ▼</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Tiempo de espera</strong></td>
+                  <td><span class="badge-min">Minimizar ▼</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Tiempo de respuesta</strong></td>
+                  <td><span class="badge-min">Minimizar ▼</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="theory-card">
+          <h2>🔬 Valor Promedio, Extremos y Varianza</h2>
+          <ul class="bullet-list">
+            <li><strong>Optimización del promedio:</strong> En la mayoría de los casos se intenta optimizar el valor promedio de cada atributo.</li>
+            <li><strong>Acotar valores máximos o mínimos:</strong> En otros casos es preferible garantizar que no se supera un valor máximo o mínimo. Por ejemplo, en <strong>sistemas interactivos</strong> puede ser preferible <strong>minimizar el máximo tiempo de respuesta</strong> para que todos los usuarios obtengan una buena percepción del servicio.</li>
+            <li><strong>Minimizar la varianza:</strong> Algunas investigaciones sugieren que en sistemas interactivos lo preferible es <strong>minimizar la varianza del tiempo de respuesta</strong>, ya que esto hace que el sistema resulte <strong>más predecible</strong> y, por tanto, <strong>más confiable</strong> para sus usuarios.</li>
+          </ul>
+        </div>
+      `,
+
+      "4.4": `
+        <div class="theory-card">
+          <h2>1️⃣ Planificación FCFS (First-Come First-Served)</h2>
+          <p>Es el algoritmo más sencillo: asigna la CPU al primer proceso que la solicita mediante una <strong>cola FIFO</strong> (cuando un proceso entra en cola, su <strong>PCB</strong> se coloca al final). Es <strong>no apropiativo</strong>.</p>
+          <ul class="bullet-list">
+            <li><strong>Inconveniente:</strong> El tiempo medio de espera nunca es mínimo y es muy sensible al orden de llegada y a la variabilidad de las ráfagas. No es apropiado para sistemas de tiempo compartido.</li>
+            <li><strong>Ejemplo Tabla 2 (P1=12 ms, P2=3 ms, P3=3 ms):</strong></li>
+          </ul>
+          <div class="gantt-container">
+            <div class="gantt-label">Configuración A (Orden P1, P2, P3) → t_me,A = (0 + 12 + 15) / 3 = 9 ms</div>
+            <div class="gantt-bar">
+              <div class="gantt-seg" style="width:66.6%; background:#0a84ff;">P1 (12)</div>
+              <div class="gantt-seg" style="width:16.7%; background:#bf5af2;">P2 (3)</div>
+              <div class="gantt-seg" style="width:16.7%; background:#30d158;">P3 (3)</div>
+            </div>
+            <div class="gantt-ticks"><span>0</span><span>12</span><span>15</span><span>18 ms</span></div>
+          </div>
+          <div class="gantt-container">
+            <div class="gantt-label">Configuración B (Orden P2, P3, P1) → t_me,B = (6 + 0 + 3) / 3 = 3 ms</div>
+            <div class="gantt-bar">
+              <div class="gantt-seg" style="width:16.7%; background:#bf5af2;">P2</div>
+              <div class="gantt-seg" style="width:16.7%; background:#30d158;">P3</div>
+              <div class="gantt-seg" style="width:66.6%; background:#0a84ff;">P1 (12)</div>
+            </div>
+            <div class="gantt-ticks"><span>0</span><span>3</span><span>6</span><span>18 ms</span></div>
+          </div>
+          <div class="warning-box">
+            <strong>El Efecto Convoy:</strong> Ocurre cuando hay un conjunto de procesos cortos pero intensivos en E/S y un único proceso muy intensivo en cómputo (ráfaga larga sin E/S). Mientras el proceso largo ocupa la CPU, todos los procesos cortos quedan detenidos esperando en la cola, provocando un bajo aprovechamiento de los recursos de E/S.
+          </div>
+        </div>
+
+        <div class="theory-card">
+          <h2>2️⃣ Planificación SJF (Shortest-Job-First)</h2>
+          <p>Asigna la CPU al proceso cuya <strong>próxima ráfaga de CPU sea más corta</strong>. En caso de empate entre dos procesos, se emplea <strong>FCFS</strong>.</p>
+          <ul class="bullet-list">
+            <li><strong>Optimalidad:</strong> Es un algoritmo <strong>óptimo</strong> porque proporciona el tiempo de espera medio más corto para un conjunto dado de procesos.</li>
+            <li><strong>Largo plazo vs. Corto plazo:</strong> Es apropiado en la planificación a largo plazo en <strong>sistemas por lotes</strong> (donde el usuario define el tiempo límite). En corto plazo es imposible conocer la duración exacta de la próxima ráfaga, por lo que se predice estadísticamente con la <strong>media móvil exponencial</strong>:</li>
+          </ul>
+          <div class="formula-box">τ_(n+1) = α · t_n + (1 - α) · τ_n</div>
+          <ul class="bullet-list">
+            <li><strong>$t_n$</strong>: duración de la ráfaga más reciente (la última ejecutada).</li>
+            <li><strong>$\\tau_n$</strong>: información histórica del promedio de duración de todas las ráfagas pasadas.</li>
+            <li>Si <strong>$\\alpha = 0$</strong> $\\Rightarrow \\tau_{n+1} = \\tau_n$ (no tiene en cuenta la información más reciente).</li>
+            <li>Si <strong>$\\alpha = 1$</strong> $\\Rightarrow \\tau_{n+1} = t_n$ (la historia carece de interés; solo mira la última ráfaga).</li>
+            <li>Generalmente se toma <strong>$\\alpha = 1/2$</strong> para promediar ambas informaciones.</li>
+          </ul>
+          <p><strong>Ejemplo Tabla 3 (P1=8, P2=3, P3=5, P4=2 ms):</strong> Con FCFS $t_{me,FCFS} = \\frac{0+8+11+16}{4} = 8,75\\text{ ms}$. Con SJF (orden P4→P2→P3→P1) $t_{me,SJF} = \\frac{10+2+5+0}{4} = 4,25\\text{ ms}$.</p>
+        </div>
+
+        <div class="theory-card">
+          <h2>3️⃣ Planificación por Prioridades</h2>
+          <p>Asigna la CPU al proceso con más alta prioridad. <strong>SJF es un caso especial</strong> donde la prioridad es el inverso del tiempo predicho para la próxima ráfaga de CPU.</p>
+          <ul class="bullet-list">
+            <li><strong>Convenio:</strong> En el temario asumimos que las <strong>prioridades altas vienen dadas por los números más bajos</strong> (la prioridad más alta es la 0).</li>
+            <li><strong>Definición Interna:</strong> Usa parámetros medibles en el computador (memoria requerida, tiempo límite de ejecución, número de archivos en uso, proporción entre tiempo de E/S y uso de CPU).</li>
+            <li><strong>Definición Externa:</strong> Usa aspectos externos (importancia del proceso, dinero pagado por usar el computador, nombre del departamento o usuario en sistemas compartidos).</li>
+            <li><strong>Modos:</strong> <em>Apropiativo</em> (desaloja al proceso en ejecución si llega otro más prioritario) o <em>No apropiativo / cooperativo</em> (inserta en orden en la cola sin desalojar).</li>
+          </ul>
+          <div class="warning-box">
+            <strong>Bloqueo indefinido o muerte por inanición:</strong> Procesos de baja prioridad pueden esperar indefinidamente. Se soluciona con el <strong>envejecimiento</strong> (incrementar progresivamente la prioridad de los procesos que llevan esperando un cierto tiempo).
+          </div>
+          <p><strong>Ejemplo Tabla 4 (P1[8ms, p=3], P2[3ms, p=0], P3[5ms, p=2], P4[2ms, p=1]):</strong> Orden P2→P4→P3→P1 con $t_{me,prioridades} = \\frac{10+0+5+3}{4} = 4,5\\text{ ms}$.</p>
+        </div>
+
+        <div class="theory-card">
+          <h2>4️⃣ Planificación por Turnos (RR, Round Robin)</h2>
+          <p>Apropiado para <strong>sistemas de tiempo compartido</strong>. Es similar a FCFS pero añade una estrategia <strong>apropiativa</strong> mediante un <strong>cuanto temporal</strong> y un temporizador:</p>
+          <ul class="bullet-list">
+            <li>Si la ráfaga es <strong>inferior al cuanto</strong>, libera la CPU voluntariamente.</li>
+            <li>Si la ráfaga <strong>supera el cuanto</strong>, salta el temporizador (interrupción), se produce un cambio de contexto y el proceso se inserta al final de la cola FIFO.</li>
+          </ul>
+          <div class="gantt-container">
+            <div class="gantt-label">Tabla 5 (Cuanto = 4 ms; P1=8, P2=3, P3=5, P4=2) → t_me,RR = (9+4+13+11)/4 = 9,25 ms</div>
+            <div class="gantt-bar">
+              <div class="gantt-seg" style="width:23.5%; background:#0a84ff;">P1(4)</div>
+              <div class="gantt-seg" style="width:17.6%; background:#bf5af2;">P2(3)</div>
+              <div class="gantt-seg" style="width:23.5%; background:#30d158;">P3(4)</div>
+              <div class="gantt-seg" style="width:11.8%; background:#ff9f0a;">P4(2)</div>
+              <div class="gantt-seg" style="width:23.5%; background:#0a84ff;">P1(4)</div>
+              <div class="gantt-seg" style="width:6%; background:#30d158;">P3</div>
+            </div>
+            <div class="gantt-ticks"><span>0</span><span>4</span><span>7</span><span>11</span><span>13</span><span>17</span><span>18 ms</span></div>
+          </div>
+          <div class="highlight-box">
+            <strong>Influencia del tamaño del cuanto:</strong><br>
+            • Si es <strong>muy largo</strong> (mayor que las ráfagas): RR <strong>equivale a FCFS</strong>.<br>
+            • Si es <strong>muy pequeño</strong>: crece el número de cambios de contexto y la sobrecarga por latencia de activación. En la <strong>Figura 8</strong> (proceso de 12 ms): cuanto de 15 ms $\\rightarrow 0$ cambios; 10 ms $\\rightarrow 1$; 5 ms $\\rightarrow 2$; 3 ms $\\rightarrow 3$; 1 ms $\\rightarrow 11$ cambios.<br>
+            • Si el cambio de contexto supone un <strong>5 %</strong> del cuanto, la CPU pasa un 5 % del tiempo haciendo cambios de contexto. En computadores modernos el cuanto oscila entre <strong>10 y 100 ms</strong> y el cambio de contexto dura <strong>menos de 10 microsegundos</strong>.
+          </div>
+        </div>
+
+        <div class="theory-card">
+          <h2>5️⃣ Colas Multinivel y 6️⃣ Multinivel Realimentadas</h2>
+          <h3>Planificación mediante Colas Multinivel</h3>
+          <p>Clasifica los procesos en categorías fijas, por ejemplo: <strong>primer plano / interactivos</strong> (cola 1, con RR) y <strong>segundo plano / por lotes</strong> (cola 2, con FCFS). En la Figura 9 se ilustran 3 colas (Cola 1: Sistema, Cola 2: Interactivos, Cola 3: Batch). La planificación entre colas se gestiona mediante:</p>
+          <ul class="bullet-list">
+            <li><strong>Prioridad fija apropiativa (absoluta):</strong> Ningún proceso de una cola inferior se ejecuta mientras haya procesos en una cola superior.</li>
+            <li><strong>Cuantos temporales por cola:</strong> Cada cola recibe un porcentaje de CPU (ej. de cada 100 ms: <strong>60 ms a cola 1, 30 ms a cola 2 y 10 ms a cola 3</strong>).</li>
+          </ul>
+          <h3>Planificación mediante Colas Multinivel Realimentadas</h3>
+          <p>Permite que un proceso <strong>cambie dinámicamente de cola</strong>: los que acaparan mucha CPU bajan a colas menos prioritarias y los que esperan mucho tiempo suben a colas más prioritarias por <strong>envejecimiento</strong>.</p>
+          <div class="queue-diagram">
+            <div class="queue-level" style="border-left:4px solid #0a84ff;">
+              <span><strong>Cola 1:</strong> Nuevos procesos entran aquí. Si no terminan su ráfaga en 5 ms pasan al final de la Cola 2.</span>
+              <span class="queue-tag" style="background:var(--accent-soft);color:var(--accent);">RR q=5ms</span>
+            </div>
+            <div class="queue-level" style="border-left:4px solid #bf5af2;">
+              <span><strong>Cola 2:</strong> Ejecuta cuando la Cola 1 está vacía. Si superan 12 ms pasan al final de la Cola 3.</span>
+              <span class="queue-tag" style="background:var(--purple-soft);color:#d98ff8;">RR q=12ms</span>
+            </div>
+            <div class="queue-level" style="border-left:4px solid #30d158;">
+              <span><strong>Cola 3:</strong> Solo accede a la CPU cuando las Colas 1 y 2 están vacías.</span>
+              <span class="queue-tag" style="background:var(--success-soft);color:var(--success);">FCFS</span>
+            </div>
+          </div>
+          <p><strong>Los 5 parámetros a definir:</strong> (1) Número de colas, (2) Algoritmo en cada cola, (3) Método para promocionar un proceso, (4) Método para degradar un proceso, y (5) Método para asignar un nuevo proceso a su cola. Es el <strong>más utilizado en la práctica</strong> por su flexibilidad, aunque también el <strong>más complejo</strong> de implementar.</p>
+        </div>
+      `
+    };
+
+    /* =========================================================================
+       BANCO DE 60 PREGUNTAS DIFÍCILES (20 POR APARTADO: 4.2, 4.3, 4.4)
+       ========================================================================= */
+    const QUESTIONS_DB = {
+      "4.2": [
+        {
+          id: "42-1",
+          section: "4.2",
+          q: "¿Qué planificador se encarga específicamente de gestionar tanto la transición Nuevo → Listo como la decisión de forzar el paso Ejecutando → Saliente cuando escasean los recursos para procesos prioritarios?",
+          options: [
+            "El planificador a largo plazo",
+            "El planificador a medio plazo (swapping)",
+            "El planificador a corto plazo",
+            "El activador o dispatcher del kernel"
+          ],
+          correct: 0,
+          exp: "Según el documento (Ejercicio 9), el planificador a largo plazo gestiona las transiciones Nuevo → Listo y Ejecutando → Saliente, decidiendo la admisión o finalización de procesos de baja prioridad si faltan recursos."
+        },
+        {
+          id: "42-2",
+          section: "4.2",
+          q: "¿Cuál es la responsabilidad fundamental del planificador a medio plazo en la arquitectura de planificación del sistema operativo?",
+          options: [
+            "Realizar el swapping o intercambio temporal de procesos activos entre la memoria principal y el disco",
+            "Asignar cuantos temporales a los procesos contenidos exclusivamente en la caché L1/L2",
+            "Calcular la media móvil exponencial de las ráfagas de entrada/salida",
+            "Ejecutar el cambio de modo usuario a modo kernel durante las interrupciones de reloj"
+          ],
+          correct: 0,
+          exp: "El planificador a medio plazo realiza el swapping (intercambio de procesos activos entre el disco y la memoria principal) para optimizar el número de procesos simultáneos en ejecución."
+        },
+        {
+          id: "42-3",
+          section: "4.2",
+          q: "Respecto a la ubicación de los procesos listos para ejecutarse, ¿qué condición es estrictamente obligatoria para que el planificador a corto plazo pueda asignarles la CPU?",
+          options: [
+            "El proceso debe estar contenido en la memoria principal",
+            "El proceso debe encontrarse almacenado en el área de swap del disco secundario",
+            "El proceso debe haber agotado previamente al menos un cuanto temporal completo",
+            "Su bloque de control de proceso (PCB) debe tener prioridad externa igual a cero"
+          ],
+          correct: 0,
+          exp: "Como se explica en los niveles de planificación, para que un proceso pueda ejecutarse debe estar contenido obligatoriamente en la memoria principal."
+        },
+        {
+          id: "42-4",
+          section: "4.2",
+          q: "¿Qué nombre técnico recibe el tiempo empleado por el sistema operativo en desalojar un proceso en ejecución y cargar uno nuevo mediante el dispatcher?",
+          options: [
+            "Latencia de activación",
+            "Tiempo de retorno (turnaround)",
+            "Varianza de respuesta",
+            "Cuanto de realimentación"
+          ],
+          correct: 0,
+          exp: "El tiempo invertido por el kernel/dispatcher en desalojar un proceso y cargar el siguiente (cambio de contexto y cambio de modo) se denomina latencia de activación."
+        },
+        {
+          id: "42-5",
+          section: "4.2",
+          q: "En el Ejercicio 6 del documento, se repite la planificación RR (cuanto = 4 ms) para 5 procesos (P1=8, P2=4, P3=12, P4=3, P5=5 ms) añadiendo una latencia de activación de 1 ms en cada cambio de proceso. ¿Cómo varía el tiempo medio de espera?",
+          options: [
+            "Aumenta de 14,8 ms a 19,6 ms",
+            "Aumenta de 11,6 ms a 14,8 ms",
+            "Se mantiene en 14,8 ms porque la latencia solo afecta al tiempo de E/S",
+            "Aumenta de 14,2 ms a 20,6 ms"
+          ],
+          correct: 0,
+          exp: "Sin latencia de activación (Ejercicio 4), el tiempo medio de espera en RR (q=4 ms) es (15+4+20+12+23)/5 = 14,8 ms. Con 1 ms de latencia de activación entre procesos (Ejercicio 6), los tiempos de espera pasan a ser 20, 5, 28, 15 y 30 ms, dando 19,6 ms."
+        },
+        {
+          id: "42-6",
+          section: "4.2",
+          q: "En ese mismo escenario con latencia de activación de 1 ms y cuanto de 4 ms (Ejercicio 6), ¿cuál es el tiempo total de espera acumulado por el proceso P3 (ráfaga = 12 ms)?",
+          options: [
+            "28 ms (10 + 15 + 3 ms)",
+            "20 ms (8 + 11 + 1 ms)",
+            "23 ms (15 + 8 ms)",
+            "30 ms (19 + 11 ms)"
+          ],
+          correct: 0,
+          exp: "En el Ejercicio 6, P3 espera inicialmente 10 ms (4 de P1 + 1 disp + 4 de P2 + 1 disp), luego 15 ms en su segunda vuelta y 3 ms en la última: 10 + 15 + 3 = 28 ms."
+        },
+        {
+          id: "42-7",
+          section: "4.2",
+          q: "¿Cuál es la diferencia esencial entre un esquema de planificación apropiativo y uno no apropiativo (cooperativo)?",
+          options: [
+            "En el apropiativo el planificador puede desalojar un proceso en ejecución ante una interrupción o llegada de otro más prioritario; en el cooperativo el proceso retiene la CPU hasta terminar su ráfaga o pedir E/S",
+            "El cooperativo utiliza colas FIFO múltiples mientras que el apropiativo solo admite colas LIFO",
+            "El apropiativo solo puede aplicarse en el planificador a largo plazo y el cooperativo en el de corto plazo",
+            "En el cooperativo el cambio de contexto lo ejecuta la tarjeta de red sin intervención del kernel"
+          ],
+          correct: 0,
+          exp: "Un algoritmo no apropiativo o cooperativo nunca desaloja al proceso en ejecución: este solo libera la CPU voluntariamente cuando termina o solicita una operación de E/S."
+        },
+        {
+          id: "42-8",
+          section: "4.2",
+          q: "En el Ejercicio 10 (Planificación dinámica con tiempos de llegada: t=0 llegan P1[8ms, p=3], P2[4ms, p=2], P3[12ms, p=6]; en t=8ms llegan P4[3ms, p=0] y P5[5ms, p=1]), ¿qué ocurre exactamente en el instante t = 8 ms bajo el Escenario A (no apropiativo)?",
+          options: [
+            "P2 ya ha terminado (0–4 ms) y P1 lleva 4 ms ejecutados de sus 8 ms; como es cooperativo, P1 no es desalojado y continúa hasta t = 12 ms",
+            "P1 es desalojado inmediatamente en t = 8 ms para ceder la CPU a P4 (prioridad 0)",
+            "P3 se está ejecutando y cede la CPU voluntariamente a P5",
+            "El planificador de medio plazo envía P4 y P5 a disco hasta que la cola quede vacía"
+          ],
+          correct: 0,
+          exp: "En t=8 ms, P2 (4 ms) ya acabó en t=4 y P1 lleva 4 ms ejecutándose. Al ser cooperativo (Escenario A), el procesador no detiene a P1 y permite que finalice su ráfaga completa en t=12 ms antes de ejecutar P4."
+        },
+        {
+          id: "42-9",
+          section: "4.2",
+          q: "Comparando los resultados del Escenario A (no apropiativo) y del Escenario B (apropiativo) del Ejercicio 10 con llegadas dinámicas en t = 8 ms, ¿qué conclusión se obtiene sobre los tiempos de espera?",
+          options: [
+            "El tiempo de espera medio coincide en ambos escenarios (7 ms), pero en el apropiativo se reduce el tiempo de espera de los procesos más prioritarios (P4 y P5)",
+            "El Escenario B reduce el tiempo medio de espera de 14 ms a 3,5 ms",
+            "El Escenario A obtiene un menor tiempo de espera para P4 y P5 que el Escenario B",
+            "El tiempo de espera de P1 se reduce a 0 ms en el Escenario B"
+          ],
+          correct: 0,
+          exp: "En el Escenario A: t_me = (4+0+20+4+7)/5 = 7 ms. En el Escenario B: t_me = (12+0+20+0+3)/5 = 7 ms. El promedio es 7 ms en ambos, pero P4 y P5 (los más prioritarios) esperan 0 y 3 ms en lugar de 4 y 7 ms."
+        },
+        {
+          id: "42-10",
+          section: "4.2",
+          q: "Cuando un nuevo proceso entra en la cola de espera de un planificador FCFS o RR, ¿qué estructura de datos del proceso es la que realmente se enlaza al final de la cola FIFO?",
+          options: [
+            "Su Bloque de Control de Proceso (PCB)",
+            "Su pila completa de llamadas del kernel en disco",
+            "El vector de interrupciones del dispositivo de E/S",
+            "El archivo ejecutable binario sin cargar en memoria"
+          ],
+          correct: 0,
+          exp: "Como indica el texto en la sección de FCFS y en el Ejercicio 5, la cola de espera contiene y enlaza los PCBs (Process Control Blocks) de los procesos."
+        },
+        {
+          id: "42-11",
+          section: "4.2",
+          q: "¿Qué operaciones del sistema operativo componen la sobrecarga que se produce cada vez que se conmuta la CPU de un proceso a otro?",
+          options: [
+            "La ejecución de instrucciones del kernel para realizar el cambio de contexto y el cambio de modo para desalojar el proceso en ejecución y cargar el nuevo",
+            "La compilación JIT del código fuente del proceso entrante y el borrado de la memoria ROM",
+            "El volcado íntegro de la memoria RAM al disco duro mediante DMA en cada cuanto",
+            "La reasignación de prioridades externas por parte del administrador del sistema"
+          ],
+          correct: 0,
+          exp: "Como detalla el Ejercicio 8 y el apartado de RR, cada intercambio requiere ejecutar instrucciones del kernel para producir el cambio de contexto y el cambio de modo (latencia de activación)."
+        },
+        {
+          id: "42-12",
+          section: "4.2",
+          q: "¿Cómo se comportan en la CPU los procesos que provocan la formación de una cola de espera en el 'efecto convoy' frente al proceso que retiene la CPU?",
+          options: [
+            "Son un conjunto de procesos cortos pero intensivos en operaciones de E/S, frente a un único proceso muy intensivo en cómputo (ráfaga larga sin operaciones de E/S)",
+            "Son procesos muy largos sin E/S retenidos por un único proceso corto de prioridad 0",
+            "Son procesos del kernel bloqueados por el planificador a medio plazo durante el swapping",
+            "Son procesos que agotan sistemáticamente su cuanto temporal en una cola Round Robin"
+          ],
+          correct: 0,
+          exp: "El documento define el efecto convoy con un conjunto de procesos cortos pero intensivos en E/S que quedan esperando en la cola mientras un único proceso muy intensivo en cómputo (ráfaga larga sin E/S) acapara la CPU."
+        },
+        {
+          id: "42-13",
+          section: "4.2",
+          q: "En el Ejercicio 1 (5 procesos: P1=8, P2=4, P3=12, P4=3, P5=5 ms), ¿cuál es el tiempo medio de espera con FCFS en el orden original frente al orden inverso de llegada (P5→P4→P3→P2→P1)?",
+          options: [
+            "14,2 ms en el orden original y 11,6 ms en el orden inverso",
+            "11,6 ms en el orden original y 14,2 ms en el orden inverso",
+            "8,4 ms en ambos órdenes porque la suma de ráfagas es constante",
+            "14,8 ms en el orden original y 17,0 ms en el orden inverso"
+          ],
+          correct: 0,
+          exp: "En el Ejercicio 1, en orden directo los tiempos de espera son 0, 8, 12, 24 y 27 ms -> media = 71/5 = 14,2 ms. En orden inverso son 24, 20, 9, 5 y 0 ms -> media = 58/5 = 11,6 ms."
+        },
+        {
+          id: "42-14",
+          section: "4.2",
+          q: "En el Ejercicio 2, si aplicamos SJF a los mismos 5 procesos del Ejercicio 1 (P1=8, P2=4, P3=12, P4=3, P5=5 ms) llegando todos en t = 0 pero en orden inverso, ¿qué sucede con el diagrama de Gantt y el tiempo medio de espera?",
+          options: [
+            "La secuencia de ejecución (P4→P2→P5→P1→P3) y el tiempo medio de espera (8,4 ms) son exactamente los mismos que en el orden directo",
+            "El tiempo medio de espera baja de 8,4 ms a 4,25 ms al invertirse la cola",
+            "El orden de ejecución se invierte completamente porque SJF prioriza el último en llegar",
+            "Se produce un empate múltiple que obliga a usar Round Robin"
+          ],
+          correct: 0,
+          exp: "Como explica la solución del Ejercicio 2, al tener todas las ráfagas duraciones distintas y estar presentes al inicio, SJF selecciona siempre P4(3)→P2(4)→P5(5)→P1(8)→P3(12) con t_me = (12+3+20+0+7)/5 = 8,4 ms sin importar su orden de llegada."
+        },
+        {
+          id: "42-15",
+          section: "4.2",
+          q: "¿En qué condición el resultado del Ejercicio 2 (SJF con 5 procesos) SÍ cambiaría al modificar los instantes de llegada de los procesos?",
+          options: [
+            "Si durante el intervalo de ejecución de los procesos llegasen nuevos procesos a la cola en instantes posteriores, obligando al planificador a reconsiderar el orden",
+            "Si el dispositivo de salida aumentase su velocidad de transmisión",
+            "Si el cuanto temporal se fijase por encima de 18 ms",
+            "Si todos los procesos llegasen en el instante t = 0 pero con prioridades externas idénticas"
+          ],
+          correct: 0,
+          exp: "El texto destaca que la invariabilidad ante el orden de fila solo se cumple siempre que todos estén en cola y no lleguen nuevos procesos durante el intervalo de ejecución."
+        },
+        {
+          id: "42-16",
+          section: "4.2",
+          q: "En el Ejercicio 3 (5 procesos: P1[8ms, p=3], P2[4ms, p=2], P3[12ms, p=6], P4[3ms, p=0], P5[5ms, p=1]), ¿cuál es el tiempo medio de espera si los números bajos indican prioridad alta vs. si los números altos indican prioridad alta?",
+          options: [
+            "8,6 ms cuando números bajos son mayor prioridad, y 17 ms cuando números altos son mayor prioridad",
+            "8,4 ms en ambos casos por simetría del diagrama de Gantt",
+            "17 ms con números bajos prioritarios y 8,6 ms con números altos prioritarios",
+            "4,5 ms con números bajos prioritarios y 14,2 ms con números altos prioritarios"
+          ],
+          correct: 0,
+          exp: "Con números pequeños = alta prioridad (P4→P5→P2→P1→P3): t_me = (12+8+20+0+3)/5 = 8,6 ms. Si números altos = alta prioridad (P3→P1→P2→P5→P4): t_me = (12+20+0+29+24)/5 = 17 ms."
+        },
+        {
+          id: "42-17",
+          section: "4.2",
+          q: "En el Ejercicio 4 (P1=8, P2=4, P3=12, P4=3, P5=5 ms), si empleamos Round Robin y aumentamos el cuanto temporal de 4 ms a 18 ms, ¿qué ocurre con el algoritmo y cuál es el tiempo medio de espera resultante?",
+          options: [
+            "Todos los procesos completan sus ráfagas dentro de un solo cuanto, por lo que RR equivale exactamente a FCFS con t_me = 14,2 ms",
+            "RR equivale a SJF logrando el mínimo óptimo de 8,4 ms",
+            "El tiempo medio de espera sube a 19,6 ms por el exceso de cuanto ocioso",
+            "El proceso P3 sigue necesitando dos cuantos porque 12 ms supera la media de 6,4 ms"
+          ],
+          correct: 0,
+          exp: "Al ser la ráfaga máxima de 12 ms (P3) y el cuanto de 18 ms, todos los procesos terminan en su primer turno sin ser desalojados, arrojando el mismo resultado que FCFS (14,2 ms)."
+        },
+        {
+          id: "42-18",
+          section: "4.2",
+          q: "En el Ejercicio 5 de colas multinivel (P1[18ms, Alta], P2[12ms, Baja], P3[4ms, Baja], P4[3ms, Alta], P5[5ms, Alta]), ¿cuál es el tiempo medio de espera en el Caso A (prioridad fija entre colas y FCFS dentro de cada cola)?",
+          options: [
+            "20,6 ms (secuencia P1 → P4 → P5 en cola Alta, seguida de P2 → P3 en cola Baja)",
+            "16,8 ms porque los procesos cortos P4 y P5 adelantan a P1",
+            "14,2 ms al ejecutarse en orden estricto de llegada P1 → P2 → P3 → P4 → P5",
+            "24,0 ms porque la cola Baja sufre bloqueo indefinido"
+          ],
+          correct: 0,
+          exp: "En el Caso A del Ejercicio 5 se vacía primero la cola Alta con FCFS: P1(18) → P4(3) → P5(5), y luego la Baja con FCFS: P2(12) → P3(4). Tiempos de espera: P1=0, P2=26, P3=38, P4=18, P5=21 -> media = 103/5 = 20,6 ms."
+        },
+        {
+          id: "42-19",
+          section: "4.2",
+          q: "En el Ejercicio 5 de colas multinivel, al pasar del Caso A (FCFS en cada cola) al Caso B (RR con q=6 ms en cola Alta y RR con q=5 ms en cola Baja, manteniendo prioridad absoluta entre colas), ¿cómo cambia el tiempo medio de espera?",
+          options: [
+            "Desciende de 20,6 ms a 16,8 ms gracias a que P4 (3 ms) y P5 (5 ms) no tienen que esperar a que termine toda la ráfaga de 18 ms de P1",
+            "Aumenta de 20,6 ms a 25,4 ms por los cambios de contexto en la cola de alta prioridad",
+            "Permanece exactamente en 20,6 ms porque la cola de baja prioridad sigue empezando en t = 26 ms",
+            "La cola de baja prioridad comienza a ejecutarse en t = 6 ms tras el primer cuanto de P1"
+          ],
+          correct: 0,
+          exp: "Aunque la cola Baja sigue empezando en t=26 ms (cuando acaba la cola Alta), dentro de la cola Alta P4 y P5 esperan solo 6 y 9 ms en lugar de 18 y 21 ms. Los tiempos quedan P1=8, P2=30, P3=31, P4=6, P5=9 -> media = 84/5 = 16,8 ms."
+        },
+        {
+          id: "42-20",
+          section: "4.2",
+          q: "En el Caso C del Ejercicio 5, además de usar RR en cada cola (q=6 ms en Alta, q=5 ms en Baja), se asigna un cuanto temporal a cada cola: 16 ms para la cola Alta y 10 ms para la cola Baja. ¿Qué ocurre exactamente en el instante t = 16 ms?",
+          options: [
+            "Se agota el cuanto de 16 ms de la cola Alta cuando P1 solo ha podido ejecutar 2 ms de su segundo turno (6+3+5+2 = 16 ms), cediéndose la CPU a la cola Baja durante 10 ms",
+            "P1 completa otros 6 ms hasta t = 20 ms porque el cuanto de proceso prevalece sobre el cuanto de la cola",
+            "La cola Alta ya se ha vaciado por completo en t = 16 ms",
+            "Se descartan los 2 ms ejecutados por P1 y vuelve a empezar desde cero en el siguiente turno"
+          ],
+          correct: 0,
+          exp: "En el primer turno de 16 ms de la cola Alta se ejecutan P1(6 ms) + P4(3 ms) + P5(5 ms) = 14 ms, quedando solo 2 ms para P1 antes de que en t=16 ms se ceda obligatoriamente el procesador a la cola Baja (que ejecuta P2[5], P3[4] y P2[1] durante sus 10 ms)."
+        }
+      ],
+
+      "4.3": [
+        {
+          id: "43-1",
+          section: "4.3",
+          q: "Según Silberschatz et al. (2013, p. 265) citado en el punto 4.3, aunque idealmente el uso de la CPU podría alcanzar el 100 %, ¿entre qué valores varía esta carga en el uso real de los sistemas?",
+          options: [
+            "Entre el 40 % y el 90 %",
+            "Entre el 10 % y el 50 %",
+            "Entre el 60 % y el 99 %",
+            "Entre el 25 % y el 75 %"
+          ],
+          correct: 0,
+          exp: "El punto 4.3 especifica textualmente que, aunque idealmente el uso de la CPU podría alcanzar el 100 %, en el uso real esta carga varía entre el 40 % y el 90 %."
+        },
+        {
+          id: "43-2",
+          section: "4.3",
+          q: "¿Cómo se define exactamente el criterio de 'Tasa de procesamiento' (throughput) en la planificación de la CPU?",
+          options: [
+            "Es una medida del número de procesos que se completan por unidad de tiempo",
+            "Es el porcentaje de instrucciones de usuario ejecutadas frente a instrucciones del kernel",
+            "Es la velocidad en gigahercios a la que conmuta el dispatcher entre dos procesos",
+            "Es la suma de tiempos que un proceso pasa ejecutándose en la CPU sin contar esperas de E/S"
+          ],
+          correct: 0,
+          exp: "La tasa de procesamiento (throughput) mide el número de procesos que se completan por unidad de tiempo y depende lógicamente de la duración de cada proceso."
+        },
+        {
+          id: "43-3",
+          section: "4.3",
+          q: "Desde el punto de vista de un proceso individual, el 'Tiempo de ejecución' es la suma exacta de cuatro tiempos parciales. ¿Cuáles son?",
+          options: [
+            "Esperando a entrar en memoria + esperando en cola a ser ejecutado + ejecutándose en la CPU + esperando a la finalización de operaciones de E/S",
+            "Tiempo de compilación + tiempo en cola de listos + tiempo de cambio de contexto + tiempo de respuesta",
+            "Tiempo de uso de CPU + latencia de activación + tiempo de envejecimiento + tiempo de cuanto",
+            "Esperando al usuario + ejecutándose en modo kernel + esperando en disco + enviando la primera respuesta"
+          ],
+          correct: 0,
+          exp: "El texto define el tiempo de ejecución como la suma de los tiempos que el proceso pasa: (1) esperando a entrar en memoria, (2) esperando a ser ejecutado, (3) ejecutándose y (4) esperando a la finalización de operaciones de E/S."
+        },
+        {
+          id: "43-4",
+          section: "4.3",
+          q: "De todos los tiempos que integran el tiempo de ejecución de un proceso, ¿a cuál afecta únicamente el algoritmo de planificación de la CPU?",
+          options: [
+            "Únicamente al tiempo de espera (el tiempo que el proceso pasa esperando en la cola de espera para ejecutarse)",
+            "Tanto al tiempo de ejecución en la CPU como a la duración física de las operaciones de E/S",
+            "Al tiempo que tarda el proceso en ser admitido en memoria principal y al tiempo de E/S",
+            "Exclusivamente a la velocidad física del dispositivo de salida en sistemas por lotes"
+          ],
+          correct: 0,
+          exp: "El punto 4.3 recalca que, de los tiempos que forman el tiempo de ejecución, el algoritmo de planificación de CPU afecta únicamente al tiempo que el proceso pasa esperando en cola para ejecutarse (tiempo de espera)."
+        },
+        {
+          id: "43-5",
+          section: "4.3",
+          q: "¿Por qué se introduce el criterio de 'Tiempo de respuesta' como alternativa al tiempo de ejecución en el caso de los sistemas interactivos?",
+          options: [
+            "Porque mide el tiempo entre el comienzo de una tarea y el envío de la primera respuesta al usuario, que puede no coincidir con el tiempo total de ejecución del proceso",
+            "Porque en los sistemas interactivos los procesos no realizan operaciones de entrada/salida",
+            "Porque el tiempo de respuesta excluye el tiempo que el proceso pasa en la cola de listos",
+            "Porque mide el número total de procesos interactivos finalizados por cada hora de CPU"
+          ],
+          correct: 0,
+          exp: "En sistemas interactivos importa cuánto espera el usuario hasta comenzar a recibir la primera respuesta desde que lanza la tarea, aun cuando el proceso siga ejecutándose después."
+        },
+        {
+          id: "43-6",
+          section: "4.3",
+          q: "Además del algoritmo de planificación, ¿por qué factor físico viene limitado el 'Tiempo de respuesta' según el apartado 4.3?",
+          options: [
+            "Por la velocidad del dispositivo de salida utilizado",
+            "Por el tamaño del registro contador de programa (PC)",
+            "Por el número máximo de archivos abiertos simultáneamente",
+            "Por la capacidad total del área de swap en el disco magnético"
+          ],
+          correct: 0,
+          exp: "El apartado 4.3 indica expresamente que el tiempo de respuesta tiene en cuenta el tiempo que debe esperar el usuario hasta comenzar a recibir una respuesta y viene limitado por la velocidad del dispositivo de salida utilizado."
+        },
+        {
+          id: "43-7",
+          section: "4.3",
+          q: "Según la Tabla 1 (Objetivos de optimización de los criterios de planificación de la CPU), ¿cuál de las siguientes combinaciones de objetivos es 100 % correcta?",
+          options: [
+            "Maximizar Uso de la CPU y Tasa de procesamiento; Minimizar Tiempo de ejecución, Tiempo de espera y Tiempo de respuesta",
+            "Maximizar Uso de la CPU, Tasa de procesamiento y Tiempo de ejecución; Minimizar Tiempo de espera y Tiempo de respuesta",
+            "Minimizar Uso de la CPU para ahorrar energía y Maximizar Tasa de procesamiento y Tiempo de respuesta",
+            "Maximizar Tiempo de respuesta en sistemas interactivos y Minimizar Tasa de procesamiento"
+          ],
+          correct: 0,
+          exp: "La Tabla 1 establece que se debe Maximizar el Uso de la CPU y la Tasa de procesamiento (throughput), y Minimizar el Tiempo de ejecución, el Tiempo de espera y el Tiempo de respuesta."
+        },
+        {
+          id: "43-8",
+          section: "4.3",
+          q: "Aunque habitualmente se intenta optimizar el valor promedio de cada criterio, en un sistema interactivo donde se busca que TODOS los usuarios obtengan una buena percepción del servicio, ¿qué estrategia sobre cotas resulta preferible?",
+          options: [
+            "Minimizar el máximo tiempo de respuesta",
+            "Maximizar el mínimo tiempo de espera en cola",
+            "Maximizar el máximo tiempo de ejecución por lotes",
+            "Minimizar la tasa de procesamiento mínima garantizada"
+          ],
+          correct: 0,
+          exp: "El texto señala que en sistemas interactivos puede ser preferible garantizar que no se supera un valor máximo, es decir, minimizar el máximo tiempo de respuesta para que todos los usuarios perciban un buen servicio."
+        },
+        {
+          id: "43-9",
+          section: "4.3",
+          q: "Según las investigaciones citadas en el punto 4.3 para sistemas interactivos, ¿qué optimización estadística sobre el tiempo de respuesta es preferible para que el sistema resulte más predecible y confiable para los usuarios?",
+          options: [
+            "Minimizar la varianza del tiempo de respuesta",
+            "Maximizar la desviación típica del tiempo de respuesta",
+            "Igualar la mediana del tiempo de respuesta con el tiempo total de ejecución",
+            "Hacer que el coeficiente alfa de la media móvil sea igual a 0"
+          ],
+          correct: 0,
+          exp: "El documento destaca que algunas investigaciones sugieren que es preferible minimizar la varianza del tiempo de respuesta, pues ello hace que el sistema resulte más predecible y, por tanto, más confiable para sus usuarios."
+        },
+        {
+          id: "43-10",
+          section: "4.3",
+          q: "Si un proceso pasa 2 ms esperando entrar en memoria, 5 ms en la cola de listos antes de su primera ráfaga, ejecuta 4 ms en CPU, realiza E/S durante 10 ms, vuelve a esperar 3 ms en la cola de listos y ejecuta sus últimos 2 ms en CPU, ¿cuál es su Tiempo de espera y cuál su Tiempo de ejecución?",
+          options: [
+            "Tiempo de espera = 8 ms; Tiempo de ejecución = 26 ms",
+            "Tiempo de espera = 10 ms; Tiempo de ejecución = 24 ms",
+            "Tiempo de espera = 20 ms; Tiempo de ejecución = 26 ms",
+            "Tiempo de espera = 5 ms; Tiempo de ejecución = 16 ms"
+          ],
+          correct: 0,
+          exp: "El tiempo de espera es la suma de tiempos en la cola de espera de listos: 5 + 3 = 8 ms. El tiempo de ejecución suma espera memoria (2) + cola listos (5+3=8) + CPU (4+2=6) + E/S (10) = 26 ms."
+        },
+        {
+          id: "43-11",
+          section: "4.3",
+          q: "¿Cómo influye la duración de los procesos que se ejecutan en el sistema sobre la tasa de procesamiento (throughput)?",
+          options: [
+            "Depende directamente de la duración de cada proceso: procesos más cortos permiten completar más procesos por unidad de tiempo que procesos largos",
+            "La tasa de procesamiento es independiente de la duración de los procesos y solo depende de la frecuencia del reloj",
+            "A mayor duración de cada proceso individual, mayor es el número de procesos completados por segundo",
+            "Solo depende del tamaño de la memoria secundaria y nunca de la duración de las ráfagas"
+          ],
+          correct: 0,
+          exp: "Como indica el punto 4.3, la tasa de procesamiento mide el número de procesos completados por unidad de tiempo y, como es lógico, depende también de la duración de cada proceso."
+        },
+        {
+          id: "43-12",
+          section: "4.3",
+          q: "Un usuario prefiere un sistema cuyo tiempo de respuesta sea siempre de 1,5 segundos constantes frente a otro cuyo promedio es 1,0 segundo pero oscila erráticamente entre 0,1 y 8 segundos. ¿Qué concepto del punto 4.3 explica este fenómeno?",
+          options: [
+            "La minimización de la varianza del tiempo de respuesta, que incrementa la predecibilidad y confiabilidad del sistema",
+            "El efecto convoy producido por la cola de entrada/salida",
+            "La maximización de la tasa de procesamiento en sistemas por lotes",
+            "La reducción de la latencia de activación del planificador a largo plazo"
+          ],
+          correct: 0,
+          exp: "Minimizar la varianza del tiempo de respuesta evita fluctuaciones bruscas, haciendo que el sistema sea más predecible y confiable para el usuario aunque el promedio puro no sea el más bajo."
+        },
+        {
+          id: "43-13",
+          section: "4.3",
+          q: "¿Por qué el criterio de 'Uso de la CPU' busca eliminar los 'tiempos vacíos de carga'?",
+          options: [
+            "Porque el procesador es un recurso crítico y se busca mantenerlo ocupado ejecutando procesos útiles el máximo porcentaje de tiempo posible",
+            "Porque cuando la CPU está vacía aumenta el tiempo de espera en el dispositivo de salida",
+            "Porque los tiempos vacíos de carga provocan inanición en las colas de prioridad fija",
+            "Porque el estándar POSIX prohíbe que la CPU baje del 90 % de ocupación"
+          ],
+          correct: 0,
+          exp: "En el criterio Uso de la CPU interesa mantener la CPU lo más ocupada posible, eliminando los tiempos vacíos de carga para aprovechar al máximo el procesador."
+        },
+        {
+          id: "43-14",
+          section: "4.3",
+          q: "Si comparamos dos algoritmos de planificación A y B sobre el mismo conjunto de procesos cuyas duraciones de CPU y E/S son fijas, ¿qué diferencia existirá entre el tiempo de ejecución de un proceso bajo A y bajo B (asumiendo admisión inmediata en memoria)?",
+          options: [
+            "La diferencia entre sus tiempos de ejecución será exactamente igual a la diferencia entre sus tiempos de espera en la cola de listos",
+            "El algoritmo con mayor tiempo de espera tendrá menor tiempo de ejecución total",
+            "El algoritmo modificará la duración de las ráfagas de CPU de cada proceso",
+            "Ninguna, porque el tiempo de ejecución nunca cambia al cambiar de algoritmo de planificación"
+          ],
+          correct: 0,
+          exp: "Dado que el algoritmo de planificación afecta únicamente al tiempo de espera en cola (mientras que los tiempos de CPU y E/S son propios del proceso), cualquier variación en el tiempo de ejecución se debe exclusivamente a la variación en su tiempo de espera."
+        },
+        {
+          id: "43-15",
+          section: "4.3",
+          q: "¿Cuál de los cinco criterios de planificación del punto 4.3 NO se expresa en unidades de tiempo (por ejemplo, milisegundos o segundos), sino como una razón de procesos por unidad de tiempo o como un porcentaje?",
+          options: [
+            "El Uso de la CPU (porcentaje) y la Tasa de procesamiento / throughput (procesos por unidad de tiempo)",
+            "El Tiempo de ejecución y el Tiempo de respuesta",
+            "El Tiempo de espera y la Latencia de activación",
+            "Únicamente el Tiempo de respuesta en sistemas interactivos"
+          ],
+          correct: 0,
+          exp: "El Uso de la CPU se mide en porcentaje (40%–90% en uso real) y la Tasa de procesamiento en número de procesos completados por unidad de tiempo; los otros tres criterios (ejecución, espera y respuesta) son tiempos."
+        },
+        {
+          id: "43-16",
+          section: "4.3",
+          q: "¿Puede el tiempo de respuesta de un proceso interactivo ser menor que su tiempo total de ejecución?",
+          options: [
+            "Sí, habitualmente es mucho menor, ya que mide solo hasta que se envía la primera respuesta mientras el proceso puede seguir ejecutándose mucho más tiempo",
+            "No, el tiempo de respuesta siempre es mayor o igual que el tiempo de ejecución total",
+            "Solo cuando el uso de la CPU supera el 100 %",
+            "No, ambos tiempos coinciden por definición en todos los sistemas operativos"
+          ],
+          correct: 0,
+          exp: "El texto aclara que el tiempo de respuesta mide el intervalo entre el comienzo de una tarea y el envío de la primera respuesta, que puede no coincidir (y suele ser mucho menor) con el tiempo total de ejecución del proceso."
+        },
+        {
+          id: "43-17",
+          section: "4.3",
+          q: "Si un sistema operativo aumenta drásticamente la frecuencia de cambios de contexto utilizando un cuanto temporal extremadamente diminuto (comparable a la latencia de activación), ¿qué criterios de la Tabla 1 se degradan de forma directa?",
+          options: [
+            "Disminuyen el Uso efectivo de la CPU (para procesos) y la Tasa de procesamiento, y aumentan el Tiempo de espera y el Tiempo de ejecución",
+            "Se maximiza la Tasa de procesamiento y se reduce a cero el Tiempo de ejecución",
+            "Mejora el Tiempo de espera medio sin afectar al Uso de la CPU",
+            "Solo se ve afectado el tiempo de espera para entrar en memoria principal"
+          ],
+          correct: 0,
+          exp: "Al gastar gran parte del tiempo de CPU en cambios de contexto (sobrecarga del kernel), cae la ejecución efectiva de procesos, aumentando los tiempos de espera y ejecución (como se demuestra en los Ejercicios 6 y 8)."
+        },
+        {
+          id: "43-18",
+          section: "4.3",
+          q: "¿Qué criterio de planificación es el que se calcula de forma estándar en todos los ejercicios prácticos (Ejercicios 1 al 6 y 10) del documento para comparar cuantitativamente FCFS, SJF, Prioridades, RR y Colas Multinivel?",
+          options: [
+            "El tiempo medio de espera (t_me)",
+            "La varianza de la tasa de procesamiento",
+            "El porcentaje de ocupación del bus de entrada/salida",
+            "El tiempo de espera para entrar en memoria secundaria"
+          ],
+          correct: 0,
+          exp: "Como el algoritmo de planificación afecta únicamente al tiempo que el proceso pasa en la cola de espera, la métrica fundamental comparada en las tablas y ejercicios del documento es el tiempo medio de espera (t_me)."
+        },
+        {
+          id: "43-19",
+          section: "4.3",
+          q: "En relación con los objetivos de la Tabla 1, ¿qué conflicto clásico surge al intentar maximizar simultáneamente el Uso de la CPU (con pocos cambios de contexto) y minimizar el Tiempo de respuesta en un sistema de tiempo compartido?",
+          options: [
+            "Reducir el tiempo de respuesta exige conmutar frecuentemente la CPU (cuantos cortos), lo cual incrementa la sobrecarga de cambios de contexto y puede reducir el rendimiento efectivo de la CPU",
+            "Maximizar el uso de la CPU obliga a apagar los dispositivos de salida interactivos",
+            "Minimizar el tiempo de respuesta requiere usar el algoritmo FCFS no apropiativo",
+            "No existe ningún compromiso entre ambos: un cuanto infinito minimiza el tiempo de respuesta"
+          ],
+          correct: 0,
+          exp: "Cada criterio tiene sus ventajas e inconvenientes: un cuanto pequeño mejora el tiempo de respuesta interactivo pero eleva la sobrecarga por cambios de contexto; por ello debe elegirse un compromiso (ej. cuantos de 10–100 ms frente a cambios de contexto < 10 microsegundos)."
+        },
+        {
+          id: "43-20",
+          section: "4.3",
+          q: "Según el apartado 4.3, ¿cuál de las siguientes afirmaciones sobre el 'Tiempo de espera' es FALSA?",
+          options: [
+            "Incluye el tiempo que el proceso permanece bloqueado esperando la finalización de sus operaciones de entrada/salida",
+            "Es la suma de los tiempos que el proceso pasa en la cola de espera",
+            "Es el único componente del tiempo de ejecución afectado directamente por el algoritmo de planificación de la CPU",
+            "Nuestro objetivo de optimización según la Tabla 1 es minimizarlo"
+          ],
+          correct: 0,
+          exp: "Es FALSA porque el tiempo esperando la finalización de operaciones de E/S forma parte del 'Tiempo de ejecución', pero NO del 'Tiempo de espera' (que solo contabiliza las esperas en la cola de listos para usar la CPU)."
+        }
+      ],
+
+      "4.4": [
+        {
+          id: "44-1",
+          section: "4.4",
+          q: "En el ejemplo de la Tabla 2 para FCFS (P1=12 ms, P2=3 ms, P3=3 ms), ¿cuáles son los tiempos medios de espera exactos en la configuración A (orden P1, P2, P3) y en la configuración B (orden P2, P3, P1)?",
+          options: [
+            "t_me,A = 9 ms y t_me,B = 3 ms",
+            "t_me,A = 12 ms y t_me,B = 6 ms",
+            "t_me,A = 8,75 ms y t_me,B = 4,25 ms",
+            "t_me,A = 6 ms y t_me,B = 2 ms"
+          ],
+          correct: 0,
+          exp: "En la configuración A los tiempos de espera son P1=0, P2=12, P3=15 -> (0+12+15)/3 = 9 ms. En la configuración B (llegan como P2, P3, P1) los tiempos de espera son P1=6, P2=0, P3=3 -> (6+0+3)/3 = 3 ms."
+        },
+        {
+          id: "44-2",
+          section: "4.4",
+          q: "En el algoritmo SJF (Shortest-Job-First), ¿qué regla se aplica si dos procesos listos en la cola tienen exactamente la misma duración para su próxima ráfaga de CPU?",
+          options: [
+            "Se emplea el algoritmo FCFS para deshacer el empate",
+            "Se desaloja a ambos y se pasa al tercer proceso de la cola",
+            "Se divide el cuanto temporal a la mitad entre los dos procesos empatados",
+            "Se elige aquel cuyo identificador de proceso (PID) sea un número impar"
+          ],
+          correct: 0,
+          exp: "El apartado de Planificación SJF indica explícitamente: 'Si esta duración es la misma para dos procesos, se emplea el algoritmo FCFS para deshacer el empate'."
+        },
+        {
+          id: "44-3",
+          section: "4.4",
+          q: "¿En qué sentido se afirma matemáticamente en el punto 4.4 que el algoritmo SJF es 'óptimo'?",
+          options: [
+            "En el sentido de que, para un conjunto dado de procesos, proporciona el tiempo de espera medio más corto",
+            "En que garantiza un 0 % de cambios de contexto en sistemas interactivos",
+            "En que elimina por completo el riesgo de bloqueo indefinido o muerte por inanición",
+            "En que predice sin margen de error las ráfagas futuras usando α = 0"
+          ],
+          correct: 0,
+          exp: "Se puede probar que SJF es óptimo porque, para un conjunto dado de procesos, proporciona siempre el tiempo de espera medio más corto al adelantar los trabajos breves antes de los largos."
+        },
+        {
+          id: "44-4",
+          section: "4.4",
+          q: "Para estimar la próxima ráfaga de CPU en SJF a corto plazo se utiliza la media móvil exponencial: τ_(n+1) = α·t_n + (1 - α)·τ_n. ¿Qué representan exactamente t_n y τ_n en esta fórmula?",
+          options: [
+            "t_n contiene la duración real de la ráfaga más reciente (la última ejecutada) y τ_n almacena la información histórica del promedio de duración de todas las ráfagas pasadas",
+            "t_n es el promedio histórico de todas las ráfagas pasadas y τ_n es la duración real de la última ráfaga ejecutada",
+            "t_n es el tiempo de espera en cola y τ_n es la latencia de activación del dispatcher",
+            "t_n es el límite fijado por el usuario en lotes y τ_n es el cuanto de Round Robin"
+          ],
+          correct: 0,
+          exp: "Según la página 17 del PDF: el valor de t_n contiene la información de la ráfaga más reciente (la última que se ha ejecutado), mientras que τ_n almacena la información histórica del promedio de todas las ráfagas pasadas."
+        },
+        {
+          id: "44-5",
+          section: "4.4",
+          q: "En la fórmula de predicción por media móvil exponencial τ_(n+1) = α·t_n + (1 - α)·τ_n, ¿qué implica tomar α = 0 y qué implica tomar α = 1?",
+          options: [
+            "α = 0 implica τ_(n+1) = τ_n (no se tiene en cuenta la información más reciente); α = 1 implica τ_(n+1) = t_n (la información histórica carece de interés y solo importa la última ráfaga)",
+            "α = 0 implica τ_(n+1) = t_n (solo importa la última ráfaga); α = 1 implica τ_(n+1) = τ_n (solo importa la historia)",
+            "Ambos valores anulan la predicción y obligan al planificador a usar Round Robin",
+            "α = 0 duplica el peso de la última ráfaga y α = 1 divide entre dos el historial"
+          ],
+          correct: 0,
+          exp: "Con α = 0 resulta τ_(n+1) = τ_n (ignoramos la última ráfaga como transitoria). Con α = 1 resulta τ_(n+1) = t_n (la historia carece de interés). Generalmente se toma α = 1/2 para promediar ambas."
+        },
+        {
+          id: "44-6",
+          section: "4.4",
+          q: "Si para un proceso la estimación histórica era τ_n = 10 ms, su última ráfaga real ha durado t_n = 6 ms y empleamos el valor habitual α = 1/2 en la media móvil exponencial, ¿cuál será la predicción τ_(n+1) para su próxima ráfaga?",
+          options: [
+            "8 ms",
+            "6 ms",
+            "10 ms",
+            "16 ms"
+          ],
+          correct: 0,
+          exp: "Aplicando τ_(n+1) = α·t_n + (1 - α)·τ_n con α = 0,5: τ_(n+1) = 0,5 · 6 + 0,5 · 10 = 3 + 5 = 8 ms."
+        },
+        {
+          id: "44-7",
+          section: "4.4",
+          q: "En la Tabla 3 (comparativa FCFS vs SJF con 4 procesos: P1=8 ms, P2=3 ms, P3=5 ms, P4=2 ms llegados en ese orden), ¿cuáles son los tiempos medios de espera de ambos algoritmos?",
+          options: [
+            "t_me,FCFS = 8,75 ms y t_me,SJF = 4,25 ms",
+            "t_me,FCFS = 9,25 ms y t_me,SJF = 4,50 ms",
+            "t_me,FCFS = 8,40 ms y t_me,SJF = 3,00 ms",
+            "t_me,FCFS = 10,0 ms y t_me,SJF = 5,25 ms"
+          ],
+          correct: 0,
+          exp: "Con FCFS (P1→P2→P3→P4) las esperas son 0, 8, 11 y 16 ms -> 35/4 = 8,75 ms. Con SJF (P4→P2→P3→P1) las esperas son P1=10, P2=2, P3=5, P4=0 -> 17/4 = 4,25 ms."
+        },
+        {
+          id: "44-8",
+          section: "4.4",
+          q: "¿Cómo se relaciona conceptualmente el algoritmo SJF con el algoritmo de Planificación por Prioridades?",
+          options: [
+            "SJF es un caso especial de la planificación por prioridades donde la prioridad viene dada por el inverso del tiempo predicho para la próxima ráfaga de CPU",
+            "La planificación por prioridades es un caso especial de SJF donde todas las ráfagas valen 0 ms",
+            "Son algoritmos opuestos: SJF asigna mayor prioridad a las ráfagas más largas",
+            "No tienen relación porque SJF solo admite prioridades definidas externamente"
+          ],
+          correct: 0,
+          exp: "En el punto 4.4 se explica que podemos considerar el algoritmo SJF como un caso especial de la planificación por prioridades, donde la prioridad viene dada por el inverso del tiempo predicho para la próxima ráfaga de CPU."
+        },
+        {
+          id: "44-9",
+          section: "4.4",
+          q: "En la planificación por prioridades, ¿cuál de los siguientes parámetros corresponde a una definición INTERNA de la prioridad y cuál a una EXTERNA?",
+          options: [
+            "Interna: proporción de tiempo entre E/S y uso de CPU (o memoria requerida / archivos en uso); Externa: dinero que se paga por el uso del computador o departamento que envía el proceso",
+            "Interna: nombre del departamento del usuario; Externa: cantidad de memoria RAM requerida por el proceso",
+            "Interna: importancia política del proceso; Externa: número de archivos en uso por el proceso",
+            "Interna: tarifa abonada por el cliente; Externa: tiempo límite de ejecución medible por el computador"
+          ],
+          correct: 0,
+          exp: "Las prioridades internas usan parámetros medibles en el computador (memoria requerida, tiempo límite, archivos en uso, proporción E/S vs CPU). Las externas usan criterios ajenos a la ejecución (importancia, dinero pagado, departamento/usuario)."
+        },
+        {
+          id: "44-10",
+          section: "4.4",
+          q: "¿Cuál es el mayor problema de la planificación por prioridades (y de SJF) y en qué consiste exactamente la técnica para solucionarlo?",
+          options: [
+            "El bloqueo indefinido o muerte por inanición; se soluciona mediante el envejecimiento, que incrementa progresivamente la prioridad de los procesos según su tiempo esperando en cola",
+            "El efecto convoy; se soluciona reduciendo a cero la prioridad de los procesos de E/S",
+            "La latencia de activación; se soluciona eliminando el temporizador de hardware",
+            "El desbordamiento de la cola FIFO; se soluciona aplicando el algoritmo FCFS inverso"
+          ],
+          correct: 0,
+          exp: "El mayor problema es el bloqueo indefinido o muerte por inanición (procesos de baja prioridad que nunca acceden a la CPU). Se resuelve con el envejecimiento (aging): aumentar progresivamente la prioridad de los procesos que llevan esperando cierto tiempo."
+        },
+        {
+          id: "44-11",
+          section: "4.4",
+          q: "En la Tabla 4 de planificación por prioridades (P1[8ms, prio 3], P2[3ms, prio 0], P3[5ms, prio 2], P4[2ms, prio 1]), asumiendo el convenio del texto (números más bajos = prioridad más alta), ¿cuál es la secuencia de Gantt y el tiempo medio de espera?",
+          options: [
+            "Secuencia P2 → P4 → P3 → P1 con tiempo medio de espera de 4,5 ms",
+            "Secuencia P1 → P3 → P4 → P2 con tiempo medio de espera de 8,75 ms",
+            "Secuencia P4 → P2 → P3 → P1 con tiempo medio de espera de 4,25 ms",
+            "Secuencia P2 → P3 → P4 → P1 con tiempo medio de espera de 5,5 ms"
+          ],
+          correct: 0,
+          exp: "Con 0 como máxima prioridad, el orden es P2(prio 0, 3ms) → P4(prio 1, 2ms) → P3(prio 2, 5ms) → P1(prio 3, 8ms). Tiempos de espera: P1=10, P2=0, P3=5, P4=3 -> (10+0+5+3)/4 = 4,5 ms."
+        },
+        {
+          id: "44-12",
+          section: "4.4",
+          q: "En la Tabla 5 de planificación Round Robin con cuanto de 4 ms (P1=8 ms, P2=3 ms, P3=5 ms, P4=2 ms), ¿cómo se calcula el tiempo de espera de P3 (13 ms) y cuál es el tiempo medio de espera de los 4 procesos?",
+          options: [
+            "P3 espera 7 ms antes de su primer turno y luego (17 - 11) = 6 ms tras ser desalojado en t=11 (7 + 6 = 13 ms); el tiempo medio de espera es 9,25 ms",
+            "P3 espera 11 ms al inicio y 2 ms al final (13 ms); el tiempo medio de espera es 8,75 ms",
+            "P3 espera 4 ms por cada proceso previo (12 ms) más 1 ms de cambio de contexto; el tiempo medio es 9,50 ms",
+            "P3 no sufre desalojo porque su ráfaga es de 5 ms; el tiempo medio de espera es 4,50 ms"
+          ],
+          correct: 0,
+          exp: "En la Figura 7 (RR q=4ms): P1(0–4), P2(4–7), P3(7–11), P4(11–13), P1(13–17), P3(17–18). P3 espera 7 ms al inicio y luego desde t=11 hasta t=17 (17-11=6 ms): 7+6=13 ms. Media = (9+4+13+11)/4 = 9,25 ms."
+        },
+        {
+          id: "44-13",
+          section: "4.4",
+          q: "Según la Figura 8 del documento, si tenemos un único proceso cuya ráfaga de CPU dura 12 ms, ¿cuántos cambios de contexto se producen respectivamente para tamaños de cuanto de 15 ms, 10 ms, 5 ms, 3 ms y 1 ms?",
+          options: [
+            "0, 1, 2, 3 y 11 cambios de contexto respectivamente",
+            "1, 2, 3, 4 y 12 cambios de contexto respectivamente",
+            "0, 1, 2, 4 y 12 cambios de contexto respectivamente",
+            "0, 2, 3, 4 y 10 cambios de contexto respectivamente"
+          ],
+          correct: 0,
+          exp: "En la Figura 8, para una ráfaga de 12 ms: con q=15 ms hay 0 cambios; con q=10 ms (10+2) hay 1 cambio; con q=5 ms (5+5+2) hay 2 cambios; con q=3 ms (3+3+3+3) hay 3 cambios; con q=1 ms hay 11 cambios."
+        },
+        {
+          id: "44-14",
+          section: "4.4",
+          q: "De acuerdo con Silberschatz et al. (2013, p. 273) citado en el punto 4.4, ¿entre qué valores oscilan los tiempos de cuanto en los computadores modernos y cuánto suele durar un cambio de contexto?",
+          options: [
+            "Los tiempos de cuanto oscilan entre 10 y 100 ms, mientras que un cambio de contexto suele durar menos de 10 microsegundos",
+            "Los tiempos de cuanto oscilan entre 1 y 5 ms, y el cambio de contexto dura 1 ms",
+            "Los tiempos de cuanto oscilan entre 100 y 500 microsegundos, y el cambio de contexto dura 10 ms",
+            "Los tiempos de cuanto son fijos de 50 segundos, y el cambio de contexto dura menos de 10 milisegundos"
+          ],
+          correct: 0,
+          exp: "El texto señala textualmente que en los computadores modernos los tiempos de cuanto oscilan entre los 10 y los 100 ms, mientras que un cambio de contexto suele durar menos de 10 microsegundos."
+        },
+        {
+          id: "44-15",
+          section: "4.4",
+          q: "Si en un planificador Round Robin el tiempo requerido para realizar el cambio de contexto supone un 5 % del tiempo del cuanto temporal definido, ¿qué consecuencia directa tiene esto sobre el procesador?",
+          options: [
+            "Que la CPU pasa un 5 % de su tiempo de ejecución realizando cambios de contexto (sobrecarga del kernel)",
+            "Que la tasa de procesamiento aumenta un 5 % respecto a SJF",
+            "Que el 95 % de los procesos sufren muerte por inanición",
+            "Que el algoritmo se comporta exactamente igual que FCFS"
+          ],
+          correct: 0,
+          exp: "Como indica el texto en la página 23: 'Si el cambio de contexto supone un 5% del tiempo de cuanto, eso quiere decir que la CPU pasa un 5% de su tiempo de ejecución realizando cambios de contexto'."
+        },
+        {
+          id: "44-16",
+          section: "4.4",
+          q: "En un planificador de colas multinivel con 3 colas (Cola 1: Procesos del sistema, Cola 2: Procesos interactivos, Cola 3: Procesos batch) gobernadas entre sí por prioridad fija apropiativa absoluta, ¿cuándo puede ejecutarse un proceso de la Cola 3?",
+          options: [
+            "Únicamente cuando no existan procesos listos en las Colas 1 ni 2 (ambas deben estar completamente vacías)",
+            "Cada vez que un proceso de la Cola 2 agota su primer cuanto temporal de Round Robin",
+            "Siempre que su ráfaga de CPU sea más corta que la de los procesos de la Cola 1",
+            "Automáticamente tras esperar 10 ms gracias al movimiento dinámico entre colas"
+          ],
+          correct: 0,
+          exp: "En colas multinivel con prioridad absoluta entre colas (Figura 9), ningún proceso de la cola 3 podrá ejecutarse mientras haya procesos en las colas 1 o 2."
+        },
+        {
+          id: "44-17",
+          section: "4.4",
+          q: "Además de la prioridad fija apropiativa entre colas, ¿qué otra estrategia de planificación entre colas propone el punto 4.4 para evitar que las colas inferiores queden totalmente desatendidas en un sistema de colas multinivel?",
+          options: [
+            "Asignar cuantos temporales a las diferentes colas para que cada una tenga acceso a un cierto porcentaje de la CPU (ej. de cada 100 ms: 60 ms a la cola 1, 30 ms a la cola 2 y 10 ms a la cola 3)",
+            "Hacer que todas las colas compartan una única cola FIFO sin distinción de categorías",
+            "Reemplazar el algoritmo de la cola 1 por SJF no apropiativo",
+            "Bloquear indefinidamente los procesos del sistema cuando llega un proceso por lotes"
+          ],
+          correct: 0,
+          exp: "La página 25 del PDF explica que otra posibilidad consiste en asignar cuantos temporales a las diferentes colas (por ejemplo, de cada 100 ms asignar 60 a la cola 1, 30 a la cola 2 y 10 a la cola 3)."
+        },
+        {
+          id: "44-18",
+          section: "4.4",
+          q: "¿Cuál es la diferencia fundamental entre la planificación mediante colas multinivel estándar y la planificación mediante colas multinivel realimentadas?",
+          options: [
+            "En las colas multinivel realimentadas se permite que un proceso cambie dinámicamente de cola en función de su comportamiento (consumo de CPU o tiempo de espera)",
+            "En las colas multinivel realimentadas solo existe una cola única gestionada por prioridades internas",
+            "En las colas multinivel estándar los procesos cambian de cola cada 5 ms y en las realimentadas tienen asignación permanente",
+            "Las colas multinivel realimentadas no permiten utilizar el algoritmo Round Robin en ninguna de sus colas"
+          ],
+          correct: 0,
+          exp: "Las colas multinivel realimentadas añaden flexibilidad permitiendo que un proceso cambie dinámicamente de cola: los intensivos en CPU bajan a colas de menor prioridad y los que esperan mucho suben por envejecimiento."
+        },
+        {
+          id: "44-19",
+          section: "4.4",
+          q: "En el ejemplo de planificador de colas multinivel realimentadas de la Figura 10 (Cola 1: RR q=5 ms; Cola 2: RR q=12 ms; Cola 3: FCFS), ¿qué ocurre con un nuevo proceso cuya ráfaga de CPU es de 20 ms?",
+          options: [
+            "Entra siempre en la Cola 1, ejecuta 5 ms y al no terminar se mueve al final de la Cola 2; cuando la Cola 1 está vacía, ejecuta 12 ms en la Cola 2 y al no terminar se mueve al final de la Cola 3 para ejecutar sus 3 ms restantes por FCFS cuando las Colas 1 y 2 estén vacías",
+            "Se inserta directamente en la Cola 3 al entrar al sistema porque su ráfaga supera los 12 ms",
+            "Ejecuta 4 turnos de 5 ms dentro de la Cola 1 sin cambiar de cola porque entró primero",
+            "Empieza en la Cola 3 y va promocionando a la Cola 2 y Cola 1 a medida que consume CPU"
+          ],
+          correct: 0,
+          exp: "Según las páginas 25 y 26: los nuevos procesos entran siempre en la Cola 1. Si no acaba en 5 ms pasa al final de la Cola 2; allí dispone de un cuanto de 12 ms (cuando Cola 1 esté vacía) y, si aún requiere más tiempo, pasa al final de la Cola 3 (FCFS)."
+        },
+        {
+          id: "44-20",
+          section: "4.4",
+          q: "¿Cuáles son exactamente los 5 parámetros que es necesario definir para implementar un planificador mediante colas multinivel realimentadas, el cual es el más utilizado en la práctica pero también el más complejo?",
+          options: [
+            "(1) Número de colas, (2) Algoritmo en cada cola, (3) Método para promocionar un proceso a prioridad superior, (4) Método para degradar un proceso a prioridad inferior, y (5) Método para asignar un nuevo proceso a su cola correspondiente",
+            "(1) Uso de CPU, (2) Throughput, (3) Tiempo de ejecución, (4) Tiempo de espera y (5) Tiempo de respuesta",
+            "(1) Coeficiente α, (2) Latencia del dispatcher, (3) Tamaño del PCB, (4) Tamaño del swap y (5) Velocidad de E/S",
+            "(1) Orden de llegada, (2) Tiempo de ráfaga, (3) Prioridad interna, (4) Prioridad externa y (5) Diagrama de Gantt"
+          ],
+          correct: 0,
+          exp: "En la página 26 del PDF se enumeran los 5 parámetros obligatorios para implementar colas multinivel realimentadas: número de colas, algoritmo de cada cola, método para promocionar, método para degradar y método para asignar un nuevo proceso a su cola."
+        }
+      ]
+    };
+
+    /* =========================================================================
+       MOTOR DEL JUEGO: FISHER-YATES, VIDAS, PUNTUACIÓN Y MODO MEZCLA
+       ========================================================================= */
+    const SECTION_TITLES = {
+      "4.2": { badge: "PUNTO 4.2", title: "Fundamentos y Niveles" },
+      "4.3": { badge: "PUNTO 4.3", title: "Criterios de Planificación" },
+      "4.4": { badge: "PUNTO 4.4", title: "Algoritmos de Planificación" }
+    };
+
+    let currentSection = "4.2";
+    let currentMode = "theory";
+    let mixAllTopics = false;
+
+    let deck = [];
+    let currentIndex = 0;
+    let lives = 3;
+    let score = 0;
+    let streak = 0;
+    let correctCount = 0;
+    let answeredCurrent = false;
+    let currentShuffledOptions = [];
+
+    function shuffleArray(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function selectSection(sec) {
+      currentSection = sec;
+      document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+      const activeTab = document.getElementById("tab-" + sec.replace(".", ""));
+      if (activeTab) activeTab.classList.add("active");
+
+      document.getElementById("headerBadge").textContent = SECTION_TITLES[sec].badge;
+      document.getElementById("headerTitle").textContent = SECTION_TITLES[sec].title;
+
+      if (currentMode === "quiz") {
+        startNewGame();
+      } else {
+        render();
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      document.getElementById("btnModeTheory").classList.toggle("active", mode === "theory");
+      document.getElementById("btnModeQuiz").classList.toggle("active", mode === "quiz");
+
+      if (mode === "quiz") {
+        startNewGame();
+      } else {
+        render();
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function toggleMixMode(checked) {
+      mixAllTopics = checked;
+      startNewGame();
+    }
+
+    function startNewGame() {
+      const pool = mixAllTopics
+        ? [...QUESTIONS_DB["4.2"], ...QUESTIONS_DB["4.3"], ...QUESTIONS_DB["4.4"]]
+        : [...QUESTIONS_DB[currentSection]];
+
+      deck = shuffleArray(pool);
+      currentIndex = 0;
+      lives = 3;
+      score = 0;
+      streak = 0;
+      correctCount = 0;
+      answeredCurrent = false;
+      prepareCurrentQuestion();
+      render();
+    }
+
+    function prepareCurrentQuestion() {
+      if (currentIndex >= deck.length) return;
+      const qObj = deck[currentIndex];
+      const indexedOptions = qObj.options.map((text, idx) => ({
+        text,
+        isCorrect: idx === qObj.correct
+      }));
+      currentShuffledOptions = shuffleArray(indexedOptions);
+      answeredCurrent = false;
+    }
+
+    function handleAnswer(selectedIdx) {
+      if (answeredCurrent || lives <= 0) return;
+      answeredCurrent = true;
+
+      const chosen = currentShuffledOptions[selectedIdx];
+      if (chosen.isCorrect) {
+        streak++;
+        correctCount++;
+        const bonus = streak > 1 ? (streak - 1) * 25 : 0;
+        score += 100 + bonus;
+      } else {
+        streak = 0;
+        lives--;
+      }
+      renderQuizView(selectedIdx);
+    }
+
+    function nextQuestion() {
+      if (lives <= 0) {
+        renderEndScreen(false);
+        return;
+      }
+      currentIndex++;
+      if (currentIndex >= deck.length) {
+        renderEndScreen(true);
+        return;
+      }
+      prepareCurrentQuestion();
+      renderQuizView(null);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function renderHearts() {
+      let html = "";
+      for (let i = 0; i < 3; i++) {
+        html += i < lives ? "❤️" : "🖤";
+      }
+      return html;
+    }
+
+    function renderQuizView(selectedIdx = null) {
+      const container = document.getElementById("mainContainer");
+      const qObj = deck[currentIndex];
+      const total = deck.length;
+      const progressPct = Math.round((currentIndex / total) * 100);
+      const letters = ["A", "B", "C", "D"];
+
+      let optionsHtml = "";
+      currentShuffledOptions.forEach((opt, idx) => {
+        let stateClass = "";
+        if (answeredCurrent) {
+          if (opt.isCorrect) stateClass = "correct";
+          else if (idx === selectedIdx) stateClass = "wrong";
+        }
+        optionsHtml += `
+          <button class="option-btn ${stateClass}" 
+                  onclick="handleAnswer(${idx})" 
+                  ${answeredCurrent ? "disabled" : ""}>
+            <span class="opt-letter">${letters[idx]}</span>
+            <span>${opt.text}</span>
+          </button>
+        `;
+      });
+
+      let feedbackHtml = "";
+      if (answeredCurrent) {
+        const wasRight = currentShuffledOptions[selectedIdx]?.isCorrect;
+        const statusColor = wasRight ? "var(--success)" : "var(--danger)";
+        const statusTitle = wasRight
+          ? `✅ ¡Correcto! (+${100 + (streak > 1 ? (streak - 1) * 25 : 0)} pts)`
+          : (lives > 0 ? "❌ Respuesta incorrecta (-1 ❤️)" : "💀 ¡Te has quedado sin vidas!");
+        const btnLabel = lives <= 0
+          ? "Ver resultado final"
+          : (currentIndex + 1 >= total ? "Finalizar partida 🏆" : "Siguiente pregunta ➔");
+
+        feedbackHtml = `
+          <div class="feedback-panel">
+            <span class="feedback-title" style="color:${statusColor}">${statusTitle}</span>
+            <p style="color:#d1d1d6;"><strong>Justificación:</strong> ${qObj.exp}</p>
+            <button class="next-btn" onclick="nextQuestion()">${btnLabel}</button>
+          </div>
+        `;
+      }
+
+      container.innerHTML = `
+        <div class="quiz-hud">
+          <div class="hud-row">
+            <div class="lives-box" aria-label="Vidas restantes">${renderHearts()}</div>
+            <div>
+              <span class="score-box">⭐ ${score} pts</span>
+              ${streak > 1 ? `<span class="streak-badge">🔥 x${streak}</span>` : ""}
+            </div>
+          </div>
+          <div class="progress-meta">
+            <span>Pregunta <strong>${currentIndex + 1}</strong> de <strong>${total}</strong> (Sin repetición)</span>
+            <span>Aciertos: ${correctCount}</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" style="width:${progressPct}%"></div>
+          </div>
+        </div>
+
+        <div class="mix-bar">
+          <div class="mix-info">
+            <span class="mix-title">🔀 Mezclar con los otros puntos (4.2 + 4.3 + 4.4)</span>
+            <span class="mix-sub">${mixAllTopics ? "Modo Global activo: 60 preguntas mezcladas" : `Solo preguntas del punto ${currentSection} (20 preguntas)`}</span>
+          </div>
+          <label class="ios-switch">
+            <input type="checkbox" ${mixAllTopics ? "checked" : ""} onchange="toggleMixMode(this.checked)" />
+            <span class="ios-slider"></span>
+          </label>
+        </div>
+
+        <div class="question-card">
+          <span class="q-origin-tag">Apartado ${qObj.section} · Nivel Difícil</span>
+          <div class="q-text">${qObj.q}</div>
+          <div class="options-list">
+            ${optionsHtml}
+          </div>
+          ${feedbackHtml}
+        </div>
+      `;
+    }
+
+    function renderEndScreen(completed) {
+      const container = document.getElementById("mainContainer");
+      const answeredTotal = completed ? deck.length : currentIndex + 1;
+      const accuracy = Math.round((correctCount / answeredTotal) * 100) || 0;
+
+      container.innerHTML = `
+        <div class="end-screen">
+          <div class="end-icon">${completed ? "🏆" : "💔"}</div>
+          <h2 class="end-title">${completed ? "¡Reto Superado!" : "Game Over"}</h2>
+          <p style="color:var(--text-muted); font-size:14px;">
+            ${completed
+              ? `Has completado todo el mazo ${mixAllTopics ? "global (4.2, 4.3 y 4.4)" : "del punto " + currentSection} sin quedarte sin vidas.`
+              : "Agotaste tus 3 vidas. ¡Repasa la justificación técnica o la pestaña de Teoría Visual y vuelve a intentarlo!"}
+          </p>
+          <div class="end-stats">
+            <div class="stat-pill">
+              <div class="stat-val">${score}</div>
+              <div class="stat-lbl">Puntos</div>
+            </div>
+            <div class="stat-pill">
+              <div class="stat-val">${correctCount}/${deck.length}</div>
+              <div class="stat-lbl">Aciertos</div>
+            </div>
+            <div class="stat-pill">
+              <div class="stat-val">${accuracy}%</div>
+              <div class="stat-lbl">Precisión</div>
+            </div>
+          </div>
+          <button class="primary-btn" onclick="startNewGame()">🔄 Jugar de nuevo (Barajar)</button>
+          <button class="primary-btn" style="background:#2c2c30; margin-top:8px;" onclick="setMode('theory')">📘 Repasar Teoría Visual</button>
+        </div>
+      `;
+    }
+
+    function render() {
+      const container = document.getElementById("mainContainer");
+      if (currentMode === "theory") {
+        container.innerHTML = `
+          ${THEORY_HTML[currentSection]}
+          <div style="margin-top: 16px;">
+            <button class="primary-btn" onclick="setMode('quiz')">
+              🎮 Ponerse a prueba con las 20 preguntas del punto ${currentSection}
+            </button>
+          </div>
+        `;
+      } else {
+        renderQuizView(null);
+      }
+    }
+
+    render();
+  </script>
+</body>
+</html>
